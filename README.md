@@ -19,7 +19,7 @@ Sistema completamente automático que genera y muestra efemérides diarias del K
 
 ## 🚀 Demo
 
-- **Sitio web**: [https://kpop-ephemeris-franjvj.vercel.app](https://tu-url-de-vercel.app)
+- **Sitio web**: [Enlace disponible tras despliegue]
 - **Repositorio**: [https://github.com/FranJVJ/Kpop-Ephemeris](https://github.com/FranJVJ/Kpop-Ephemeris)
 
 ## 🛠️ Tecnologías

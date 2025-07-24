@@ -16,9 +16,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files - NUNCA subir claves reales
 .env*
 !.env.example
+
+# Archivos que contienen claves sensibles
+*.key
+*.pem
+secrets.*
 
 # scripts node_modules
 /scripts/node_modules
