@@ -94,11 +94,14 @@ export default async function handler(req, res) {
     
     if (exists) {
       console.log('✅ Ya existe efeméride para hoy')
+      // Buscar el evento histórico para mostrar información completa
+      const eventData = getEphemerisForDate(day, month)
       return res.status(200).json({
         success: true,
         message: 'Efeméride ya existe para hoy',
         data: existingData,
-        date: dateString
+        date: dateString,
+        historicalEvent: eventData
       })
     }
     

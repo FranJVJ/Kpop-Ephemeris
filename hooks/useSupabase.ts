@@ -11,6 +11,18 @@ export const useEphemerides = () => {
     try {
       setLoading(true)
       console.log('🔍 Intentando conectar a Supabase...')
+      
+      // PASO 1: Llamar a la API para generar/obtener efeméride de hoy
+      try {
+        console.log('🚀 Llamando a API de efemérides diarias...')
+        const apiResponse = await fetch('/api/daily-ephemeris')
+        const apiResult = await apiResponse.json()
+        console.log('📡 Respuesta de la API:', apiResult)
+      } catch (apiError) {
+        console.warn('⚠️ Error llamando a la API, continuando con datos de Supabase:', apiError)
+      }
+      
+      // PASO 2: Obtener datos actualizados de Supabase
       console.log('📍 URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
       console.log('🔑 Anon Key presente:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
       console.log('🔑 Anon Key (primeros 20 chars):', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20))

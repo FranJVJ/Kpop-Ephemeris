@@ -56,6 +56,7 @@ export default function KpopEphemerisPage() {
   const [currentDate] = useState(new Date()) // Solo día actual, sin setCurrentDate
   const [timeUntilNext, setTimeUntilNext] = useState<string>('')
   const [forceRender, setForceRender] = useState(0) // Para forzar re-render
+  const [todayHistoricalEvent, setTodayHistoricalEvent] = useState<any>(null) // Evento histórico de hoy
   const { ephemerides: supabaseData, loading, error } = useEphemerides()
   const { language, t, formatDate, formatDateShort } = useLanguage()
 
@@ -75,6 +76,26 @@ export default function KpopEphemerisPage() {
     console.log('Language effect triggered:', language)
     setForceRender(prev => prev + 1)
   }, [language])
+
+  // Cargar evento histórico de hoy
+  useEffect(() => {
+    const fetchTodayEvent = async () => {
+      try {
+        console.log('🎯 Cargando evento histórico de hoy...')
+        const response = await fetch('/api/today-ephemeris')
+        const result = await response.json()
+        
+        if (result.success && result.data) {
+          console.log('✅ Evento histórico cargado:', result.data.title)
+          setTodayHistoricalEvent(result.data)
+        }
+      } catch (error) {
+        console.warn('⚠️ Error cargando evento histórico:', error)
+      }
+    }
+    
+    fetchTodayEvent()
+  }, [supabaseData]) // Re-ejecutar cuando cambien los datos de Supabase
 
   // Función para obtener el tiempo hasta la próxima efeméride (15:00)
   const getNextEphemerisTime = () => {
@@ -139,6 +160,23 @@ export default function KpopEphemerisPage() {
     }
     // Después de las 15:00, mostrar efeméride del día actual
     
+    // NUEVO: Si estamos viendo HOY y hay evento histórico cargado, usarlo
+    const isToday = targetDate.toDateString() === new Date().toDateString()
+    
+    if (isToday && todayHistoricalEvent && todayHistoricalEvent.hasRealEvent) {
+      console.log('🎯 Usando evento histórico para hoy:', todayHistoricalEvent.title)
+      return {
+        date: formatDateShort(targetDate),
+        year: todayHistoricalEvent.year,
+        title: todayHistoricalEvent.title,
+        description: todayHistoricalEvent.description,
+        category: todayHistoricalEvent.category,
+        group: todayHistoricalEvent.group,
+        isToday: true,
+        isHistorical: true
+      }
+    }
+    
     // Buscar datos en Supabase para la fecha objetivo
     if (supabaseData && supabaseData.length > 0) {
       const found = supabaseData.find(item => 
@@ -169,7 +207,8 @@ export default function KpopEphemerisPage() {
             title: title,
             description: description,
             category: found.category || "Especial",
-            group: found.group_name || found.artist || found.group || "Kpop"
+            group: found.group_name || found.artist || found.group || "Kpop",
+            isToday: isToday
           }
         }
         
@@ -182,7 +221,8 @@ export default function KpopEphemerisPage() {
           title: eventInfo.title,
           description: eventInfo.description,
           category: eventInfo.category,
-          group: eventInfo.group
+          group: eventInfo.group,
+          isToday: isToday
         }
       }
     }
