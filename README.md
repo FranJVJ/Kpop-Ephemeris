@@ -3,6 +3,7 @@
 > Sistema automático de efemérides del K-pop con base de datos histórica
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/FranJVJ/Kpop-Ephemeris)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel)](https://kpop-ephemeris.vercel.app)
 
 ## 📋 Descripción
 
