@@ -18,6 +18,19 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
+
+# scripts node_modules
+/scripts/node_modules
+/scripts/package-lock.json
+
+# logs
+*.log
+logs/
+
+# temporary files
+.tmp/
+temp/
 
 # vercel
 .vercel
