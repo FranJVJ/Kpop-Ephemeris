@@ -1,0 +1,23 @@
+{
+  "name": "kpop-ephemeris-daily-generator",
+  "type": "module",
+  "description": "Generador automático de efemérides diarias del Kpop con IA y traducciones",
+  "scripts": {
+    "generate-daily": "node daily-ephemeris-generator.js",
+    "generate-simple": "node daily-ephemeris-generator-simple.js",
+    "test-simple": "node daily-ephemeris-generator-simple.js --today",
+    "schedule-daily": "node scheduler.js",
+    "schedule-simple": "node scheduler-simple.js",
+    "start-auto": "node scheduler-simple.js --start",
+    "test-auto": "node scheduler-simple.js --test",
+    "test-generator": "node test-generator.js",
+    "test-ai": "node test-ai-generation.js",
+    "test-ai-today": "node test-ai-generation.js --today"
+  },
+  "dependencies": {
+    "openai": "^4.0.0",
+    "node-cron": "^3.0.0",
+    "dotenv": "^16.0.0",
+    "@supabase/supabase-js": "^2.0.0"
+  }
+}
