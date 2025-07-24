@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/generate-daily-ephemeris",
-      "schedule": "1 0 * * *"
-    }
-  ],
-  "env": {
-    "OPENAI_API_KEY": "@openai_api_key",
-    "CRON_SECRET": "@cron_secret"
-  }
-}
+{}
