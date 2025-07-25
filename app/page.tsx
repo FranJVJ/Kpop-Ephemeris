@@ -81,21 +81,83 @@ export default function KpopEphemerisPage() {
   useEffect(() => {
     const fetchTodayEvent = async () => {
       try {
-        console.log('🎯 Cargando evento histórico de hoy...')
-        const response = await fetch('/api/today-ephemeris')
+        console.log('🎯 Cargando evento histórico...')
+        
+        // Determinar qué fecha necesitamos según la hora actual
+        const now = new Date()
+        const today15 = new Date()
+        today15.setHours(15, 0, 0, 0)
+        
+        let targetDate = new Date()
+        if (now < today15) {
+          // Antes de las 15:00, buscar evento del día anterior
+          targetDate.setDate(targetDate.getDate() - 1)
+          console.log('⏰ Antes de las 15:00, buscando evento del día anterior')
+        } else {
+          console.log('⏰ Después de las 15:00, buscando evento de hoy')
+        }
+        
+        // Llamar a la API con la fecha correcta
+        const day = targetDate.getDate()
+        const month = targetDate.getMonth() + 1
+        
+        const response = await fetch(`/api/today-ephemeris?day=${day}&month=${month}`)
         const result = await response.json()
         
         if (result.success && result.data) {
           console.log('✅ Evento histórico cargado:', result.data.title)
           setTodayHistoricalEvent(result.data)
+        } else {
+          console.log('⚠️ No hay evento específico para esta fecha')
+          setTodayHistoricalEvent(null)
         }
       } catch (error) {
         console.warn('⚠️ Error cargando evento histórico:', error)
+        setTodayHistoricalEvent(null)
       }
     }
     
     fetchTodayEvent()
   }, [supabaseData]) // Re-ejecutar cuando cambien los datos de Supabase
+
+  // Timer para recargar la efeméride a las 15:00
+  useEffect(() => {
+    const checkAndUpdateEphemeris = () => {
+      const now = new Date()
+      const today15 = new Date()
+      today15.setHours(15, 0, 0, 0)
+      
+      // Si acabamos de pasar las 15:00 (en los últimos 2 minutos)
+      const timeSince15 = now.getTime() - today15.getTime()
+      if (timeSince15 >= 0 && timeSince15 <= 120000) { // 2 minutos = 120000ms
+        console.log('🕒 ¡Son las 15:00! Recargando efeméride...')
+        setForceRender(prev => prev + 1)
+        
+        // Recargar evento histórico después de un breve delay
+        setTimeout(() => {
+          const fetchTodayEvent = async () => {
+            try {
+              const response = await fetch(`/api/today-ephemeris`)
+              const result = await response.json()
+              
+              if (result.success && result.data) {
+                console.log('✅ Efeméride actualizada a las 15:00:', result.data.title)
+                setTodayHistoricalEvent(result.data)
+              }
+            } catch (error) {
+              console.warn('⚠️ Error recargando efeméride:', error)
+            }
+          }
+          fetchTodayEvent()
+        }, 1000)
+      }
+    }
+
+    // Verificar cada minuto
+    const interval = setInterval(checkAndUpdateEphemeris, 60000)
+    
+    return () => clearInterval(interval)
+  }, [])
 
   // Función para obtener el tiempo hasta la próxima efeméride (15:00)
   const getNextEphemerisTime = () => {
