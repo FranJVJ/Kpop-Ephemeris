@@ -81,7 +81,7 @@ export default function KpopEphemerisPage() {
   useEffect(() => {
     const fetchTodayEvent = async () => {
       try {
-        console.log('🎯 Cargando evento histórico...')
+        console.log('🎯 [DEBUG] Cargando evento histórico...')
         
         // Determinar qué fecha necesitamos según la hora actual
         const now = new Date()
@@ -92,27 +92,32 @@ export default function KpopEphemerisPage() {
         if (now < today15) {
           // Antes de las 15:00, buscar evento del día anterior
           targetDate.setDate(targetDate.getDate() - 1)
-          console.log('⏰ Antes de las 15:00, buscando evento del día anterior')
+          console.log('⏰ [DEBUG] Antes de las 15:00, buscando evento del día anterior')
         } else {
-          console.log('⏰ Después de las 15:00, buscando evento de hoy')
+          console.log('⏰ [DEBUG] Después de las 15:00, buscando evento de hoy')
         }
         
         // Llamar a la API con la fecha correcta
         const day = targetDate.getDate()
         const month = targetDate.getMonth() + 1
         
+        console.log(`🔍 [DEBUG] Llamando API: /api/today-ephemeris?day=${day}&month=${month}`)
+        
         const response = await fetch(`/api/today-ephemeris?day=${day}&month=${month}`)
         const result = await response.json()
         
+        console.log('📡 [DEBUG] Respuesta completa de API:', result)
+        
         if (result.success && result.data) {
-          console.log('✅ Evento histórico cargado:', result.data.title)
+          console.log('✅ [DEBUG] Evento histórico cargado:', result.data.title)
+          console.log('📋 [DEBUG] Datos completos del evento:', result.data)
           setTodayHistoricalEvent(result.data)
         } else {
-          console.log('⚠️ No hay evento específico para esta fecha')
+          console.log('⚠️ [DEBUG] No hay evento específico para esta fecha')
           setTodayHistoricalEvent(null)
         }
       } catch (error) {
-        console.warn('⚠️ Error cargando evento histórico:', error)
+        console.warn('⚠️ [DEBUG] Error cargando evento histórico:', error)
         setTodayHistoricalEvent(null)
       }
     }
@@ -214,6 +219,9 @@ export default function KpopEphemerisPage() {
     const today15 = new Date()
     today15.setHours(15, 0, 0, 0)
     
+    console.log('🎯 [DEBUG] getCurrentEphemeris ejecutándose...')
+    console.log('🔍 [DEBUG] todayHistoricalEvent:', todayHistoricalEvent)
+    
     // Determinar qué fecha buscar basándose en la hora actual
     let targetDate = new Date(currentDate)
     if (now < today15) {
@@ -222,11 +230,21 @@ export default function KpopEphemerisPage() {
     }
     // Después de las 15:00, mostrar efeméride del día actual
     
-    // NUEVO: Si estamos viendo HOY y hay evento histórico cargado, usarlo
-    const isToday = targetDate.toDateString() === new Date().toDateString()
+    console.log('📅 [DEBUG] Fecha objetivo:', targetDate.toDateString())
     
-    if (isToday && todayHistoricalEvent && todayHistoricalEvent.hasRealEvent) {
-      console.log('🎯 Usando evento histórico para hoy:', todayHistoricalEvent.title)
+    // NUEVO: Si hay evento histórico cargado para la fecha objetivo, usarlo
+    const targetDay = targetDate.getDate()
+    const targetMonth = targetDate.getMonth() + 1
+    const isTargetDate = todayHistoricalEvent?.targetDay === targetDay && todayHistoricalEvent?.targetMonth === targetMonth
+    
+    console.log('🏠 [DEBUG] Es fecha objetivo?:', isTargetDate)
+    console.log('📋 [DEBUG] Tiene evento histórico?:', !!todayHistoricalEvent)
+    console.log('✅ [DEBUG] Tiene evento real?:', todayHistoricalEvent?.hasRealEvent)
+    console.log('📆 [DEBUG] Target day/month from API:', todayHistoricalEvent?.targetDay, todayHistoricalEvent?.targetMonth)
+    console.log('🎯 [DEBUG] Target day/month calculado:', targetDay, targetMonth)
+    
+    if (isTargetDate && todayHistoricalEvent && todayHistoricalEvent.hasRealEvent) {
+      console.log('🎯 [DEBUG] ¡Usando evento histórico para fecha objetivo!:', todayHistoricalEvent.title)
       return {
         date: formatDateShort(targetDate),
         year: todayHistoricalEvent.year,
@@ -234,10 +252,12 @@ export default function KpopEphemerisPage() {
         description: todayHistoricalEvent.description,
         category: todayHistoricalEvent.category,
         group: todayHistoricalEvent.group,
-        isToday: true,
+        isToday: targetDate.toDateString() === new Date().toDateString(),
         isHistorical: true
       }
     }
+    
+    console.log('⚠️ [DEBUG] No se usó evento histórico, buscando en Supabase...')
     
     // Buscar datos en Supabase para la fecha objetivo
     if (supabaseData && supabaseData.length > 0) {
@@ -270,7 +290,7 @@ export default function KpopEphemerisPage() {
             description: description,
             category: found.category || "Especial",
             group: found.group_name || found.artist || found.group || "Kpop",
-            isToday: isToday
+            isToday: targetDate.toDateString() === new Date().toDateString()
           }
         }
         
@@ -284,7 +304,7 @@ export default function KpopEphemerisPage() {
           description: eventInfo.description,
           category: eventInfo.category,
           group: eventInfo.group,
-          isToday: isToday
+          isToday: targetDate.toDateString() === new Date().toDateString()
         }
       }
     }
