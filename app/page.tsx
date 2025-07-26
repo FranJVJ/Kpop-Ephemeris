@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Music, Star, Share2, Twitter, Instagram, Clock } from "lucide-react"
+import { Calendar, Music, Star, Share2, Twitter, Instagram, Clock, Sparkles, Heart, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useEphemerides } from "@/hooks/useSupabase"
@@ -58,7 +58,7 @@ export default function KpopEphemerisPage() {
   const [forceRender, setForceRender] = useState(0) // Para forzar re-render
   const [todayHistoricalEvent, setTodayHistoricalEvent] = useState<any>(null) // Evento histórico de hoy
   const { ephemerides: supabaseData, loading, error } = useEphemerides()
-  const { language, t, formatDate, formatDateShort } = useLanguage()
+  const { language, t, formatDate, formatDateShort, getLocalizedTimeMessage, mounted } = useLanguage()
 
   // Forzar re-render cuando cambie el idioma
   useEffect(() => {
@@ -81,8 +81,6 @@ export default function KpopEphemerisPage() {
   useEffect(() => {
     const fetchTodayEvent = async () => {
       try {
-        console.log('🎯 [DEBUG] Cargando evento histórico...')
-        
         // Determinar qué fecha necesitamos según la hora actual
         const now = new Date()
         const today15 = new Date()
@@ -92,32 +90,22 @@ export default function KpopEphemerisPage() {
         if (now < today15) {
           // Antes de las 15:00, buscar evento del día anterior
           targetDate.setDate(targetDate.getDate() - 1)
-          console.log('⏰ [DEBUG] Antes de las 15:00, buscando evento del día anterior')
-        } else {
-          console.log('⏰ [DEBUG] Después de las 15:00, buscando evento de hoy')
         }
         
         // Llamar a la API con la fecha correcta
         const day = targetDate.getDate()
         const month = targetDate.getMonth() + 1
         
-        console.log(`🔍 [DEBUG] Llamando API: /api/today-ephemeris?day=${day}&month=${month}`)
-        
         const response = await fetch(`/api/today-ephemeris?day=${day}&month=${month}`)
         const result = await response.json()
         
-        console.log('📡 [DEBUG] Respuesta completa de API:', result)
-        
         if (result.success && result.data) {
-          console.log('✅ [DEBUG] Evento histórico cargado:', result.data.title)
-          console.log('📋 [DEBUG] Datos completos del evento:', result.data)
           setTodayHistoricalEvent(result.data)
         } else {
-          console.log('⚠️ [DEBUG] No hay evento específico para esta fecha')
           setTodayHistoricalEvent(null)
         }
       } catch (error) {
-        console.warn('⚠️ [DEBUG] Error cargando evento histórico:', error)
+        console.warn('Error cargando evento histórico:', error)
         setTodayHistoricalEvent(null)
       }
     }
@@ -213,14 +201,99 @@ export default function KpopEphemerisPage() {
     return `${month}-${day}`
   }
 
+  // Función para traducir eventos históricos
+  const translateHistoricalEvent = (event: any, language: string) => {
+    // Diccionario de traducciones para eventos específicos
+    const eventTranslations: Record<string, any> = {
+      "Debut de CLC": {
+        en: {
+          title: "CLC Debut",
+          description: "In 2015, CLC debuted with 'Pepe' under Cube Entertainment, showcasing a fresh and youthful concept."
+        },
+        ko: {
+          title: "CLC 데뷔",
+          description: "2015년 CLC는 큐브 엔터테인먼트에서 'Pepe'로 데뷔하며 신선하고 청춘적인 컨셉을 선보였습니다."
+        }
+      },
+      "Lanzamiento de 'The Most Beautiful Moment in Life, Pt.1' de BTS": {
+        en: {
+          title: "BTS 'The Most Beautiful Moment in Life, Pt.1' Release",
+          description: "In 2015, BTS released this iconic album featuring 'I NEED U', marking their artistic evolution."
+        },
+        ko: {
+          title: "BTS '화양연화 pt.1' 발매",
+          description: "2015년 BTS는 'I NEED U'가 수록된 이 상징적인 앨범을 발매하며 예술적 진화를 보여주었습니다."
+        }
+      },
+      "Debut de ITZY": {
+        en: {
+          title: "ITZY Debut",
+          description: "In 2019, ITZY debuted with 'DALLA DALLA' under JYP Entertainment, revolutionizing the teen crush concept."
+        },
+        ko: {
+          title: "ITZY 데뷔",
+          description: "2019년 ITZY는 JYP 엔터테인먼트에서 'DALLA DALLA'로 데뷔하며 틴 크러시 컨셉을 혁신했습니다."
+        }
+      }
+    }
+
+    // Si hay traducción específica para este evento, usarla
+    const translation = eventTranslations[event.title]
+    if (translation && translation[language]) {
+      return {
+        ...event,
+        title: translation[language].title,
+        description: translation[language].description
+      }
+    }
+
+    // Si no hay traducción específica, usar traducciones genéricas por categoría
+    const categoryTranslations: Record<string, any> = {
+      "Debut": {
+        en: { prefix: "Debut of", suffix: "" },
+        ko: { prefix: "", suffix: " 데뷔" }
+      },
+      "Logro": {
+        en: { prefix: "Achievement by", suffix: "" },
+        ko: { prefix: "", suffix: " 성취" }
+      },
+      "Récord": {
+        en: { prefix: "Record by", suffix: "" },
+        ko: { prefix: "", suffix: " 기록" }
+      }
+    }
+
+    const catTranslation = categoryTranslations[event.category]
+    if (catTranslation && catTranslation[language] && language !== 'es') {
+      return {
+        ...event,
+        title: `${catTranslation[language].prefix} ${event.group}${catTranslation[language].suffix}`,
+        description: `An important ${event.category.toLowerCase()} in K-pop history by ${event.group} in ${event.year}.`
+      }
+    }
+
+    // Si no hay traducción, devolver el evento original
+    return event
+  }
+
   const getCurrentEphemeris = () => {
+    // Si está cargando o no está montado, devolver placeholder que no se mostrará (será reemplazado por loading UI)
+    if (loading || !mounted) {
+      return {
+        date: formatDateShort(currentDate),
+        year: "...",
+        title: "Cargando...",
+        description: "Obteniendo la curiosidad del día...",
+        category: "Especial",
+        group: "Kpop Daily",
+        isLoading: true
+      }
+    }
+
     const dateKey = formatDateKey(currentDate)
     const now = new Date()
     const today15 = new Date()
     today15.setHours(15, 0, 0, 0)
-    
-    console.log('🎯 [DEBUG] getCurrentEphemeris ejecutándose...')
-    console.log('🔍 [DEBUG] todayHistoricalEvent:', todayHistoricalEvent)
     
     // Determinar qué fecha buscar basándose en la hora actual
     let targetDate = new Date(currentDate)
@@ -230,34 +303,28 @@ export default function KpopEphemerisPage() {
     }
     // Después de las 15:00, mostrar efeméride del día actual
     
-    console.log('📅 [DEBUG] Fecha objetivo:', targetDate.toDateString())
-    
     // NUEVO: Si hay evento histórico cargado para la fecha objetivo, usarlo
     const targetDay = targetDate.getDate()
     const targetMonth = targetDate.getMonth() + 1
     const isTargetDate = todayHistoricalEvent?.targetDay === targetDay && todayHistoricalEvent?.targetMonth === targetMonth
     
-    console.log('🏠 [DEBUG] Es fecha objetivo?:', isTargetDate)
-    console.log('📋 [DEBUG] Tiene evento histórico?:', !!todayHistoricalEvent)
-    console.log('✅ [DEBUG] Tiene evento real?:', todayHistoricalEvent?.hasRealEvent)
-    console.log('📆 [DEBUG] Target day/month from API:', todayHistoricalEvent?.targetDay, todayHistoricalEvent?.targetMonth)
-    console.log('🎯 [DEBUG] Target day/month calculado:', targetDay, targetMonth)
-    
     if (isTargetDate && todayHistoricalEvent && todayHistoricalEvent.hasRealEvent) {
-      console.log('🎯 [DEBUG] ¡Usando evento histórico para fecha objetivo!:', todayHistoricalEvent.title)
+      // Traducir el evento histórico según el idioma seleccionado
+      const translatedEvent = translateHistoricalEvent(todayHistoricalEvent, language)
+      
       return {
         date: formatDateShort(targetDate),
-        year: todayHistoricalEvent.year,
-        title: todayHistoricalEvent.title,
-        description: todayHistoricalEvent.description,
-        category: todayHistoricalEvent.category,
-        group: todayHistoricalEvent.group,
+        year: translatedEvent.year,
+        title: translatedEvent.title,
+        description: translatedEvent.description,
+        category: translatedEvent.category,
+        group: translatedEvent.group,
         isToday: targetDate.toDateString() === new Date().toDateString(),
         isHistorical: true
       }
     }
     
-    console.log('⚠️ [DEBUG] No se usó evento histórico, buscando en Supabase...')
+    console.log('⚠️ No se usó evento histórico, buscando en Supabase...')
     
     // Buscar datos en Supabase para la fecha objetivo
     if (supabaseData && supabaseData.length > 0) {
@@ -461,7 +528,7 @@ export default function KpopEphemerisPage() {
 
   // Función para compartir en redes sociales
   const shareOnX = () => {
-    const text = `🎵 Efeméride del Kpop - ${ephemeris.date}
+    const text = `🎵 Curiosidad del Kpop - ${ephemeris.date}
 ${ephemeris.title}
 ${ephemeris.description}
 
@@ -472,7 +539,7 @@ ${ephemeris.description}
 
   const shareOnInstagram = () => {
     // Para Instagram, copiamos el texto al portapapeles
-    const text = `🎵 Efeméride del Kpop - ${ephemeris.date}
+    const text = `🎵 Curiosidad del Kpop - ${ephemeris.date}
 ${ephemeris.title}
 ${ephemeris.description}
 
@@ -564,38 +631,71 @@ ${ephemeris.description}
         </div>
 
         {/* Efeméride principal */}
-        <Card className="mb-8 overflow-hidden bg-white/80 backdrop-blur-sm border-white/20 shadow-xl hover:shadow-2xl transition-all duration-500">
-          <div className={`h-3 bg-gradient-to-r ${getCategoryColor(ephemeris.category)} animate-pulse-soft`} />
-          <CardContent className="p-8">
-            <div className="flex flex-col items-center text-center">
-              <div 
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${getCategoryColor(ephemeris.category)} text-white text-sm font-semibold mb-4 animate-pulse-soft hover:scale-105 transition-transform cursor-pointer`}
-              >
-                <Star className="w-4 h-4" />
-                {getCategoryTranslation(ephemeris.category)}
+        {(loading || !mounted) ? (
+          <Card className="mb-8 overflow-hidden bg-white/80 backdrop-blur-sm border-white/20 shadow-xl">
+            <div className="h-3 bg-gradient-to-r from-purple-400 to-pink-400 animate-pulse" />
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 animate-pulse mb-4">
+                  <div className="w-4 h-4 bg-gray-300 rounded-full"></div>
+                  <div className="w-16 h-4 bg-gray-300 rounded"></div>
+                </div>
+                
+                <div className="w-3/4 h-8 bg-gray-200 rounded animate-pulse mb-4"></div>
+                
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-5 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                  <div className="w-20 h-5 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                
+                <div className="max-w-3xl w-full space-y-2">
+                  <div className="w-full h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-5/6 h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="w-4/5 h-4 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                
+                <div className="mt-8 flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 animate-pulse">
+                  <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                  <div className="w-32 h-4 bg-gray-300 rounded"></div>
+                </div>
               </div>
-              
-              <h2 className="text-3xl font-bold text-gray-800 mb-4 animate-fade-in">
-                {ephemeris.title}
-              </h2>
-              
-              <div className="flex items-center gap-4 mb-6 text-gray-600">
-                <span className="text-lg font-semibold">{ephemeris.year}</span>
-                <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
-                <span className="text-lg">{ephemeris.group}</span>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="mb-8 overflow-hidden bg-white/80 backdrop-blur-sm border-white/20 shadow-xl hover:shadow-2xl transition-all duration-500">
+            <div className={`h-3 bg-gradient-to-r ${getCategoryColor(ephemeris.category)} animate-pulse-soft`} />
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center text-center">
+                <div 
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${getCategoryColor(ephemeris.category)} text-white text-sm font-semibold mb-4 animate-pulse-soft hover:scale-105 transition-transform cursor-pointer`}
+                >
+                  <Star className="w-4 h-4" />
+                  {getCategoryTranslation(ephemeris.category)}
+                </div>
+                
+                <h2 className="text-3xl font-bold text-gray-800 mb-4 animate-fade-in">
+                  {ephemeris.title}
+                </h2>
+                
+                <div className="flex items-center gap-4 mb-6 text-gray-600">
+                  <span className="text-lg font-semibold">{ephemeris.year}</span>
+                  <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
+                  <span className="text-lg">{ephemeris.group}</span>
+                </div>
+                
+                <div className="max-w-3xl">
+                  <p className="text-gray-700 leading-relaxed text-lg">{ephemeris.description}</p>
+                </div>
+                
+                <div className="mt-8 flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-4 py-2 rounded-full">
+                  <Calendar className="w-4 h-4" />
+                  <span>{t('ephemerisOf')} {formatDateShort(currentDate)}</span>
+                </div>
               </div>
-              
-              <div className="max-w-3xl">
-                <p className="text-gray-700 leading-relaxed text-lg">{ephemeris.description}</p>
-              </div>
-              
-              <div className="mt-8 flex items-center gap-2 text-sm text-purple-600 bg-purple-50 px-4 py-2 rounded-full">
-                <Calendar className="w-4 h-4" />
-                <span>{t('ephemerisOf')} {formatDateShort(currentDate)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Botones de compartir */}
         <div className="text-center mb-8">
@@ -625,24 +725,68 @@ ${ephemeris.description}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-700 rounded-lg animate-pulse">
             <Calendar className="w-4 h-4" />
             <span className="text-sm">
-              {t('newEphemerisDaily')}
+              {getLocalizedTimeMessage('newEphemerisDaily')}
             </span>
           </div>
         </div>
 
-        {/* Estadísticas */}
+        {/* Estadísticas Interactivas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="text-center p-6 bg-gradient-to-br from-pink-500 to-rose-500 text-white border-0 backdrop-blur-sm hover:scale-105 transition-all duration-300">
-            <div className="text-3xl font-bold mb-2">365</div>
-            <div className="text-pink-100">{t('daysOfHistory')}</div>
+          {/* Días de Historia */}
+          <Card className="group relative overflow-hidden text-center p-6 bg-gradient-to-br from-pink-500 to-rose-500 text-white border-0 backdrop-blur-sm hover:scale-105 hover:shadow-xl hover:shadow-pink-500/25 transition-all duration-300 cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-400 to-rose-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative z-10">
+              <div className="mb-4 transform group-hover:scale-110 group-hover:-translate-y-1 transition-transform duration-300">
+                <Calendar className="w-8 h-8 mx-auto text-white animate-pulse" style={{animationDuration: '3s'}} />
+              </div>
+              <div className="text-3xl font-bold mb-2 group-hover:text-4xl transition-all duration-300">
+                365
+              </div>
+              <div className="text-pink-100 font-medium group-hover:text-white transition-colors duration-300">
+                {t('daysOfHistory')}
+              </div>
+              <div className="mt-2 text-xs text-pink-200 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                {t('yearOfHistory')}
+              </div>
+            </div>
           </Card>
-          <Card className="text-center p-6 bg-gradient-to-br from-purple-500 to-indigo-500 text-white border-0 backdrop-blur-sm hover:scale-105 transition-all duration-300">
-            <div className="text-3xl font-bold mb-2">∞</div>
-            <div className="text-purple-100">{t('epicMoments')}</div>
+
+          {/* Momentos Épicos */}
+          <Card className="group relative overflow-hidden text-center p-6 bg-gradient-to-br from-purple-500 to-indigo-500 text-white border-0 backdrop-blur-sm hover:scale-105 hover:shadow-xl hover:shadow-purple-500/25 transition-all duration-300 cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative z-10">
+              <div className="mb-4 transform group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">
+                <Star className="w-8 h-8 mx-auto text-white animate-pulse" style={{animationDuration: '2s', animationDelay: '0.5s'}} />
+              </div>
+              <div className="text-3xl font-bold mb-2 group-hover:text-4xl transition-all duration-300">
+                ∞
+              </div>
+              <div className="text-purple-100 font-medium group-hover:text-white transition-colors duration-300">
+                {t('epicMoments')}
+              </div>
+              <div className="mt-2 text-xs text-purple-200 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                {t('epicChanges')}
+              </div>
+            </div>
           </Card>
-          <Card className="text-center p-6 bg-gradient-to-br from-blue-500 to-cyan-500 text-white border-0 backdrop-blur-sm hover:scale-105 transition-all duration-300">
-            <div className="text-3xl font-bold mb-2">♪</div>
-            <div className="text-blue-100">{t('dailyRhythm')}</div>
+
+          {/* Ritmo Diario */}
+          <Card className="group relative overflow-hidden text-center p-6 bg-gradient-to-br from-blue-500 to-cyan-500 text-white border-0 backdrop-blur-sm hover:scale-105 hover:shadow-xl hover:shadow-blue-500/25 transition-all duration-300 cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative z-10">
+              <div className="mb-4 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
+                <Heart className="w-8 h-8 mx-auto text-white animate-pulse" style={{animationDuration: '1.5s', animationDelay: '1s'}} />
+              </div>
+              <div className="text-3xl font-bold mb-2 group-hover:text-4xl transition-all duration-300">
+                ♪
+              </div>
+              <div className="text-blue-100 font-medium group-hover:text-white transition-colors duration-300">
+                {t('dailyRhythm')}
+              </div>
+              <div className="mt-2 text-xs text-blue-200 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                {getLocalizedTimeMessage('dailySchedule')}
+              </div>
+            </div>
           </Card>
         </div>
       </main>

@@ -20,9 +20,9 @@ const translations: Translations = {
     ko: "Kpop Daily"
   },
   subtitle: {
-    es: "Efemérides del Kpop",
-    en: "Kpop Ephemeris",
-    ko: "케이팝 역사"
+    es: "Curiosidades del Kpop",
+    en: "Kpop Curiosities",
+    ko: "케이팝 흥미로운 사실"
   },
   
   // Navigation
@@ -34,9 +34,9 @@ const translations: Translations = {
   
   // Timer
   nextEphemeris: {
-    es: "Próxima efeméride en:",
-    en: "Next update in:",
-    ko: "다음 업데이트:"
+    es: "Próxima curiosidad en:",
+    en: "Next curiosity in:",
+    ko: "다음 이야기:"
   },
   
   // Categories
@@ -80,8 +80,8 @@ const translations: Translations = {
   
   // Info messages
   newEphemerisDaily: {
-    es: "¡Nueva efeméride cada día a las 15:00! ✨",
-    en: "New story every day at 15:00! ✨",
+    es: "¡Nueva curiosidad cada día a las 15:00! ✨",
+    en: "New curiosity every day at 15:00! ✨",
     ko: "매일 15:00에 새로운 이야기! ✨"
   },
   
@@ -116,9 +116,9 @@ const translations: Translations = {
   
   // Date formats
   ephemerisOf: {
-    es: "Efeméride del",
-    en: "Ephemeris of",
-    ko: "기념일:"
+    es: "Curiosidad del",
+    en: "Curiosity of",
+    ko: "흥미로운 사실:"
   },
   
   // Months
@@ -137,9 +137,9 @@ const translations: Translations = {
   
   // Fallback messages
   noEphemeris: {
-    es: "No hay efemérides para este día",
-    en: "No ephemeris for this day",
-    ko: "이 날의 기념일이 없습니다"
+    es: "No hay curiosidades para este día",
+    en: "No curiosities for this day",
+    ko: "이 날의 흥미로운 사실이 없습니다"
   },
   noEphemerisDescription: {
     es: "Aún no tenemos información para esta fecha.",
@@ -167,6 +167,23 @@ const translations: Translations = {
     es: "Coreano",
     en: "Korean", 
     ko: "한국어"
+  },
+  
+  // Stats descriptions
+  yearOfHistory: {
+    es: "Un año completo de historia K-pop",
+    en: "A full year of K-pop history",
+    ko: "케이팝 역사의 완전한 한 해"
+  },
+  epicChanges: {
+    es: "Momentos que cambiaron el K-pop",
+    en: "Moments that changed K-pop",
+    ko: "케이팝을 바꾼 순간들"
+  },
+  dailySchedule: {
+    es: "15:00 cada día, sin fallar",
+    en: "15:00 every day, without fail",
+    ko: "매일 15:00, 빠짐없이"
   }
 }
 
@@ -249,6 +266,75 @@ export const useLanguage = () => {
     }
   }
 
+  // Función para formatear la hora local (15:00 hora española convertida a hora local)
+  const getLocalTime = () => {
+    // Determinar si estamos en horario de verano o invierno
+    const today = new Date()
+    const year = today.getFullYear()
+    
+    // Crear fechas para determinar horario de verano
+    const startDST = new Date(year, 2, 31) // Último domingo de marzo
+    startDST.setDate(31 - startDST.getDay())
+    
+    const endDST = new Date(year, 9, 31) // Último domingo de octubre  
+    endDST.setDate(31 - endDST.getDay())
+    
+    // Determinar si estamos en horario de verano
+    const isDST = today >= startDST && today < endDST
+    
+    // Madrid: UTC+1 en invierno, UTC+2 en verano
+    const madridOffsetHours = isDST ? 2 : 1
+    
+    // Convertir 15:00 Madrid a UTC
+    const utcHour = 15 - madridOffsetHours
+    
+    // Crear fecha UTC con la hora equivalente
+    const utcDate = new Date()
+    utcDate.setUTCHours(utcHour, 0, 0, 0)
+    
+    // Obtener la hora local
+    const localHour = utcDate.getHours()
+    const localMinute = utcDate.getMinutes()
+    
+    // Formatear según el idioma
+    if (language === 'ko') {
+      return `${localHour}:${localMinute.toString().padStart(2, '0')}`
+    } else if (language === 'en') {
+      // Formato 12 horas para inglés
+      const hour12 = localHour === 0 ? 12 : localHour > 12 ? localHour - 12 : localHour
+      const ampm = localHour >= 12 ? 'PM' : 'AM'
+      return `${hour12}:${localMinute.toString().padStart(2, '0')} ${ampm}`
+    } else {
+      // Formato 24 horas para español
+      return `${localHour}:${localMinute.toString().padStart(2, '0')}`
+    }
+  }
+
+  // Función para obtener mensajes con hora local
+  const getLocalizedTimeMessage = (key: string) => {
+    const localTime = getLocalTime()
+    
+    if (key === 'newEphemerisDaily') {
+      if (language === 'ko') {
+        return `매일 ${localTime}에 새로운 이야기! ✨`
+      } else if (language === 'en') {
+        return `New curiosity every day at ${localTime}! ✨`
+      } else {
+        return `¡Nueva curiosidad cada día a las ${localTime}! ✨`
+      }
+    } else if (key === 'dailySchedule') {
+      if (language === 'ko') {
+        return `매일 ${localTime}, 빠짐없이`
+      } else if (language === 'en') {
+        return `${localTime} every day, without fail`
+      } else {
+        return `${localTime} cada día, sin fallar`
+      }
+    }
+    
+    return translations[key]?.[language] || translations[key]?.['es'] || key
+  }
+
   return {
     language,
     setLanguage: changeLanguage,
@@ -256,6 +342,7 @@ export const useLanguage = () => {
     getLanguageInfo,
     formatDate,
     formatDateShort,
+    getLocalizedTimeMessage,
     mounted
   }
 }
